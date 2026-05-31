@@ -5,9 +5,6 @@ TextureImporter:
   - first:
       213: 271395491025058516
     second: ak74_Sniper.png0007_0
-  - first:
-      213: -2967971748791787396
-    second: ak74_Sniper.png0007_1
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -40,7 +37,7 @@ TextureImporter:
   maxTextureSize: 2048
   textureSettings:
     serializedVersion: 2
-    filterMode: 1
+    filterMode: 0
     aniso: 1
     mipBias: 0
     wrapU: 1
@@ -108,7 +105,7 @@ TextureImporter:
         serializedVersion: 2
         x: 233
         y: 0
-        width: 888
+        width: 842
         height: 821
       alignment: 0
       pivot: {x: 0, y: 0}
@@ -120,28 +117,6 @@ TextureImporter:
       bones: []
       spriteID: 4daf03cd2c034c300800000000000000
       internalID: 271395491025058516
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: ak74_Sniper.png0007_1
-      rect:
-        serializedVersion: 2
-        x: 1426
-        y: 189
-        width: 149
-        height: 399
-      alignment: 0
-      pivot: {x: 0, y: 0}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: -1
-      bones: []
-      spriteID: c70eed16b65afc6d0800000000000000
-      internalID: -2967971748791787396
       vertices: []
       indices: 
       edges: []
@@ -161,7 +136,6 @@ TextureImporter:
       entries: []
     nameFileIdTable:
       ak74_Sniper.png0007_0: 271395491025058516
-      ak74_Sniper.png0007_1: -2967971748791787396
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 
