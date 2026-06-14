@@ -1,41 +1,239 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 using UnityEngine.UI;
+using System.Collections;
+using TMPro;
 
 public class BattleUIManager : MonoBehaviour
 {
     [Header("--- Boss UI Elements ---")]
-    public GameObject bossHPBar;      // Å¸°Ù ¸Ó¸® À§ º¸½º Ã¼·Â¹Ù
-    public GameObject bossTimerBar;   // È­¸é »ó´Ü º¸½º Å¸ÀÌ¸Ó ¹Ù
+    public GameObject bossHPBar;        // íƒ€ê²Ÿ ë¨¸ë¦¬ ìœ„ ë³´ìŠ¤ ì²´ë ¥ë°” (Slider)
+    public GameObject bossTimerBar;     // í™”ë©´ ìƒë‹¨ ë³´ìŠ¤ íƒ€ì´ë¨¸ ë°” (Slider)
+
+    [Header("--- General Dummy UI Elements ---")]
+    public GameObject generalHPBar;     // ì¼ë°˜ ë”ë¯¸ ì „ìš© ì²´ë ¥ë°” (Slider)
+    public TextMeshProUGUI dummyHPText;  // ì²´ë ¥ ìˆ˜ì¹˜ í…ìŠ¤íŠ¸ (ì˜ˆ: 100 / 100)
 
     [Header("--- Reference Scripts ---")]
-    public StageManager stageManager;  // ÇöÀç ½ºÅ×ÀÌÁö ÅØ½ºÆ® Á¤º¸¸¦ °¡Á®¿Ã ½ºÅ©¸³Æ®
+    public StageManager stageManager;    // í˜„ì¬ ìŠ¤í…Œì´ì§€ ì •ë³´ë¥¼ ê°€ì ¸ì˜¬ ìŠ¤í¬ë¦½íŠ¸
 
-    // [º¸½º µµÀü] ¹öÆ°À» ´­·¶À» ¶§ ½ÇÇàµÇ´Â ÇÔ¼ö
-    public void EnterBossBattle()
+    [Header("--- Fade & Target UI ---")]
+    public Animator fadeAnimator;       // Fade_Panelì˜ ì• ë‹ˆë©”ì´í„°
+    public Image dummyImage;            // í™”ë©´ ìš°ì¸¡ í—ˆìˆ˜ì•„ë¹„ì˜ Image ì»´í¬ë„ŒíŠ¸
+    public TextMeshProUGUI dummyNameText;// í—ˆìˆ˜ì•„ë¹„ ì´ë¦„ í…ìŠ¤íŠ¸
+
+    [Header("--- Dummy Sprites ---")]
+    public Sprite generalDummySprite;   // ì¼ë°˜ í—ˆìˆ˜ì•„ë¹„ ì´ë¯¸ì§€
+    public Sprite bossDummySprite;      // ë³´ìŠ¤ ëª¬ìŠ¤í„° ì´ë¯¸ì§€
+
+    [Header("--- Boss Timer Settings ---")]
+    private float bossLimitTime = 15f;
+    private float bossCurrentTime = 15f;
+
+    // ì¸ê²Œì„ ë°ì´í„° ë‚´ë¶€ ë³€ìˆ˜
+    private int currentChapter = 1;     // ì• ìˆ«ì (1-1ì˜ '1')
+    private int currentStage = 1;       // ë’¤ ìˆ«ì (1-1ì˜ '1')
+    private float maxHP = 100f;
+    private float currentHP = 100f;
+    private bool isBossActive = false;
+    private bool isTransitioning = false;
+
+    private void Start()
     {
-        // 1. StageManager°¡ Àß ¿¬°áµÇ¾ú´ÂÁö È®ÀÎ
-        if (stageManager == null)
+        DisableSliderInteraction(generalHPBar);
+        DisableSliderInteraction(bossHPBar);
+        DisableSliderInteraction(bossTimerBar);
+
+        InitGeneralStage();
+    }
+
+    private void Update()
+    {
+        if (isBossActive && !isTransitioning)
         {
-            Debug.LogError("StageManager°¡ BattleUIManager¿¡ ¿¬°áµÇÁö ¾Ê¾Ò½À´Ï´Ù!");
-            return;
+            bossCurrentTime -= Time.deltaTime;
+
+            if (bossCurrentTime < 0) bossCurrentTime = 0;
+
+            if (bossTimerBar != null)
+            {
+                bossTimerBar.GetComponent<Slider>().value = bossCurrentTime / bossLimitTime;
+            }
+
+            if (bossCurrentTime <= 0)
+            {
+                Debug.LogWarning("ë³´ìŠ¤ ì œí•œ ì‹œê°„ ì´ˆê³¼! íŒ¨ë°° ì²˜ë¦¬ë©ë‹ˆë‹¤.");
+                StartCoroutine(TransitionToGeneralRoutine());
+            }
         }
+    }
 
-        // 2. StageManager¿¡¼­ ÇöÀç ½ºÅ×ÀÌÁö ¹øÈ£(¼ıÀÚ)¸¦ °¡Á®¿É´Ï´Ù.
-        int currentStage = stageManager.GetCurrentStageNumber();
-
-        // 3. ÇöÀç ½ºÅ×ÀÌÁö°¡ 5ÀÇ ¹è¼öÀÎÁö È®ÀÎ (5·Î ³ª´« ³ª¸ÓÁö°¡ 0ÀÎÁö È®ÀÎ)
-        if (currentStage % 5 == 0)
+    private void DisableSliderInteraction(GameObject sliderObj)
+    {
+        if (sliderObj != null)
         {
-            // 5ÀÇ ¹è¼ö ½ºÅ×ÀÌÁö¶ó¸é º¸½º UI È°¼ºÈ­!
-            if (bossHPBar != null) bossHPBar.SetActive(true);
-            if (bossTimerBar != null) bossTimerBar.SetActive(true);
+            Slider slider = sliderObj.GetComponent<Slider>();
+            if (slider != null)
+            {
+                slider.interactable = false;
+                slider.transition = Selectable.Transition.None;
+            }
+        }
+    }
 
-            Debug.Log($"[¼º°ø] {currentStage}½ºÅ×ÀÌÁö º¸½ºÀü ÁøÀÔ! UI¸¦ ÄÕ´Ï´Ù.");
+    // ì¼ë°˜ ìŠ¤í…Œì´ì§€ í™”ë©´ ì„¸íŒ… í•¨ìˆ˜
+    private void InitGeneralStage()
+    {
+        isBossActive = false;
+
+        if (generalHPBar != null) generalHPBar.SetActive(true);
+        if (bossHPBar != null) bossHPBar.SetActive(false);
+        if (bossTimerBar != null) bossTimerBar.SetActive(false);
+
+        if (dummyImage != null && generalDummySprite != null) dummyImage.sprite = generalDummySprite;
+        if (dummyNameText != null) dummyNameText.text = $"{currentChapter}-{currentStage} ì¼ë°˜ í—ˆìˆ˜ì•„ë¹„";
+
+        // â­ ë³€ê²½: ì´ì œ "1-1" ì´ë¼ëŠ” ì™„ì„±ëœ ë¬¸ìì—´ì„ ì „ë‹¬í•˜ì—¬ ì²´ë ¥ì„ ì„¸íŒ…í•©ë‹ˆë‹¤.
+        string stageKey = $"{currentChapter}-{currentStage}";
+        SetDummyMaxHPByStageKey(stageKey);
+    }
+
+    // â­ [ì´ë¦„ ê¸°ë°˜ ì²´ë ¥ ì„¸íŒ… í•¨ìˆ˜] 
+    private void SetDummyMaxHPByStageKey(string stageKey)
+    {
+        // DummyData ì°½ê³ ì— "2-1" ê°™ì€ ë¬¸ìê°€ ë“±ë¡ë˜ì–´ ìˆëŠ”ì§€ ê²€ì‚¬
+        if (DummyData.DummyHealths.ContainsKey(stageKey))
+        {
+            // ê¸°íšìê°€ í…Œì´ë¸”ì— ì •ì„±ìŠ¤ë ˆ ì ì–´ë†“ì€ í•´ë‹¹ ìŠ¤í…Œì´ì§€ ê³ ìœ  ì²´ë ¥ ëŒ€ì…!
+            maxHP = DummyData.DummyHealths[stageKey];
         }
         else
         {
-            // 5ÀÇ ¹è¼ö°¡ ¾Æ´Ï¶ó¸é º¸½ºÀü ÁøÀÔ ºÒ°¡ ¾Ë¸² (UI ¾È ÄÑÁü)
-            Debug.LogWarning($"[ºÒ°¡] º¸½º´Â 5½ºÅ×ÀÌÁö¸¶´Ù µîÀåÇÕ´Ï´Ù! (ÇöÀç {currentStage}½ºÅ×ÀÌÁö)");
+            // ë§Œì•½ í…Œì´ë¸”ì— ì—†ëŠ” ë¨¼ ë¯¸ë˜ì˜ ìŠ¤í…Œì´ì§€ë¼ë©´ ë°©ì–´ìš© ì˜ˆì™¸ ì²˜ë¦¬ ê³µì‹ ì ìš©
+            maxHP = 9999f;
         }
+
+        currentHP = maxHP;
+        UpdateHPUI();
+    }
+
+    // [ë³´ìŠ¤ ë„ì „] ë²„íŠ¼ í´ë¦­ ì‹œ
+    public void EnterBossBattle()
+    {
+        if (stageManager == null || isTransitioning) return;
+
+        int currentStageNum = stageManager.GetCurrentStageNumber();
+
+        // ë’¤ìª½ ìŠ¤í…Œì´ì§€ ìˆ«ìê°€ ë”± '5'ì¼ ë•Œ ë³´ìŠ¤ì „ í™œì„±í™”
+        if (currentStageNum == 5)
+        {
+            isBossActive = true;
+            bossCurrentTime = bossLimitTime;
+
+            if (generalHPBar != null) generalHPBar.SetActive(false);
+            if (bossHPBar != null) bossHPBar.SetActive(true);
+            if (bossTimerBar != null) bossTimerBar.SetActive(true);
+
+            if (dummyImage != null && bossDummySprite != null) dummyImage.sprite = bossDummySprite;
+            if (dummyNameText != null) dummyNameText.text = $"CHAPTER {currentChapter} BOSS ë“±ì¥!";
+
+            // â­ ë³´ìŠ¤ ì²´ë ¥ë„ ë§ˆì°¬ê°€ì§€ë¡œ ì¡°í•©ëœ í‚¤(ì˜ˆ: "1-5", "2-5")ë¥¼ ë„˜ê²¨ì„œ ëºë‹ˆë‹¤.
+            string stageKey = $"{currentChapter}-{currentStage}";
+            SetDummyMaxHPByStageKey(stageKey);
+        }
+    }
+
+    // ê³µê²© ë²„íŠ¼ í„°ì¹˜ ì‹œ
+    public void OnAttackDummy()
+    {
+        if (isTransitioning) return;
+
+        // ì‹œì—° í¸ì˜ì„±ì„ ìœ„í•´ ê³µê²©ë ¥ì„ 50ìœ¼ë¡œ ë‘ì—ˆìœ¼ë‚˜, 2ìŠ¤í…Œì´ì§€ í”¼í†µ(500~)ì„ ê³ ë ¤í•´ 
+        // í…ŒìŠ¤íŠ¸í•  ë•Œ ë‹µë‹µí•˜ì§€ ì•Šê²Œ 100 ëŒ€ë¯¸ì§€ë¡œ ì‚´ì§ ìƒí–¥ ì¡°ì •í–ˆìŠµë‹ˆë‹¤!
+        currentHP -= 100f;
+        if (currentHP < 0) currentHP = 0;
+
+        UpdateHPUI();
+
+        if (currentHP <= 0)
+        {
+            StartCoroutine(TransitionRoutine());
+        }
+    }
+
+    private void UpdateHPUI()
+    {
+        if (isBossActive)
+        {
+            if (bossHPBar != null) bossHPBar.GetComponent<Slider>().value = currentHP / maxHP;
+        }
+        else
+        {
+            if (generalHPBar != null) generalHPBar.GetComponent<Slider>().value = currentHP / maxHP;
+        }
+
+        if (dummyHPText != null) dummyHPText.text = $"{currentHP} / {maxHP}";
+    }
+
+    // [ìŠ¹ë¦¬ ì‹œ] ìë™ìœ¼ë¡œ ë‹¤ìŒ ìŠ¤í…Œì´ì§€ ì´ë™ ê³„ì‚° ë£¨í‹´
+    private IEnumerator TransitionRoutine()
+    {
+        isTransitioning = true;
+
+        if (fadeAnimator != null)
+        {
+            fadeAnimator.gameObject.SetActive(true);
+            fadeAnimator.Play("FadeInOut", -1, 0f);
+        }
+
+        yield return new WaitForSeconds(0.4f);
+
+        currentStage++;
+
+        // 5ìŠ¤í…Œì´ì§€ ë³´ìŠ¤ë¥¼ ê¹¨ê³  ë„˜ì–´ê°€ë©´ ì±•í„°ê°€ ì˜¬ë¼ê°
+        if (currentStage > 5)
+        {
+            currentChapter++;
+            currentStage = 1;
+        }
+
+        string nextStageName = $"{currentChapter}-{currentStage}";
+        if (stageManager != null)
+        {
+            stageManager.ChangeStage(nextStageName);
+        }
+
+        // ìƒˆ ìŠ¤í…Œì´ì§€ ì„¸íŒ… í˜¸ì¶œ (ì´ ë‚´ë¶€ì—ì„œ "2-1" ë¬¸ìì—´ì„ ë§Œë“¤ì–´ ìƒˆ í”¼í†µì„ ê°€ì ¸ì˜´)
+        InitGeneralStage();
+
+        yield return new WaitForSeconds(0.6f);
+
+        if (fadeAnimator != null)
+        {
+            fadeAnimator.gameObject.SetActive(false);
+        }
+        isTransitioning = false;
+    }
+
+    private IEnumerator TransitionToGeneralRoutine()
+    {
+        isTransitioning = true;
+
+        if (fadeAnimator != null)
+        {
+            fadeAnimator.gameObject.SetActive(true);
+            fadeAnimator.Play("FadeInOut", -1, 0f);
+        }
+
+        yield return new WaitForSeconds(0.4f);
+
+        InitGeneralStage();
+
+        yield return new WaitForSeconds(0.6f);
+
+        if (fadeAnimator != null)
+        {
+            fadeAnimator.gameObject.SetActive(false);
+        }
+        isTransitioning = false;
     }
 }
