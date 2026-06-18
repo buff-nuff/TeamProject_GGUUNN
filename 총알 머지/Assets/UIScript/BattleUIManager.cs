@@ -145,12 +145,20 @@ public class BattleUIManager : MonoBehaviour
     // 공격 버튼 터치 시
     public void OnAttackDummy()
     {
-        if (isTransitioning) return;
+        if (isTransitioning)
+            return;
+    }
 
-        // 시연 편의성을 위해 공격력을 50으로 두었으나, 2스테이지 피통(500~)을 고려해 
-        // 테스트할 때 답답하지 않게 100 대미지로 살짝 상향 조정했습니다!
-        currentHP -= 100f;
-        if (currentHP < 0) currentHP = 0;
+    //대미지 들어갈 때
+    public void ApplyDamage(float damage)
+    {
+        if (isTransitioning)
+            return;
+
+        currentHP -= damage;
+
+        if (currentHP < 0)
+            currentHP = 0;
 
         UpdateHPUI();
 

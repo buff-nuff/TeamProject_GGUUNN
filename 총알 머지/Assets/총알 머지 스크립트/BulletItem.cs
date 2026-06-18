@@ -8,6 +8,8 @@ public class BulletItem : MonoBehaviour,
 {
     public int level;
 
+    public float damage = 100f;
+
     private GridCell currentCell;
     private Vector3 startPosition;
 
@@ -17,6 +19,15 @@ public class BulletItem : MonoBehaviour,
         cell.currentItem = this;
 
         transform.position = cell.transform.position;
+    }
+
+    public void RemoveFromCell()
+    {
+        if (currentCell != null)
+        {
+            currentCell.currentItem = null;
+            currentCell = null;
+        }
     }
 
     public void OnBeginDrag(PointerEventData eventData)
@@ -31,6 +42,35 @@ public class BulletItem : MonoBehaviour,
 
     public void OnEndDrag(PointerEventData eventData)
     {
+
+        DeleteSlot deleteSlot =
+    FindFirstObjectByType<DeleteSlot>();
+
+        if (deleteSlot != null)
+        {
+            if (deleteSlot.IsInside(transform.position))
+            {
+                deleteSlot.DeleteBullet(this);
+                return;
+            }
+        }
+
+        MergeSlot slot = FindFirstObjectByType<MergeSlot>();
+
+        if (slot != null)
+        {
+            if (slot.IsInside(transform.position))
+            {
+                slot.Equip(this);
+                return;
+            }
+
+            if (slot.IsEquipped(this))
+            {
+                slot.Unequip(this);
+            }
+        }
+
         GridCell targetCell =
             MergeManager.Instance.GetClosestCell(transform.position);
 
@@ -42,7 +82,8 @@ public class BulletItem : MonoBehaviour,
 
         if (targetCell.currentItem == null)
         {
-            currentCell.currentItem = null;
+            if (currentCell != null)
+                currentCell.currentItem = null;
 
             currentCell = targetCell;
             targetCell.currentItem = this;
@@ -69,8 +110,7 @@ public class BulletItem : MonoBehaviour,
             Destroy(other.gameObject);
             Destroy(gameObject);
 
-            MergeManager.Instance
-                .SpawnBullet(nextLevel, targetCell);
+            MergeManager.Instance.SpawnBullet(nextLevel, targetCell);
         }
         else
         {
