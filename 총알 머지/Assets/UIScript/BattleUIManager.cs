@@ -152,6 +152,11 @@ public class BattleUIManager : MonoBehaviour
     //대미지 들어갈 때
     public void ApplyDamage(float damage)
     {
+
+        int creditReward = Mathf.FloorToInt(damage * 0.5f);
+
+        CreditManager.Instance.AddCredit(creditReward);
+
         if (isTransitioning)
             return;
 
