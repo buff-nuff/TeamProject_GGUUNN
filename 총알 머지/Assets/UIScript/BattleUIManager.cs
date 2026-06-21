@@ -1,41 +1,54 @@
 ﻿using UnityEngine;
 using UnityEngine.UI;
 using System.Collections;
+using System.Collections.Generic;
 using TMPro;
 
 public class BattleUIManager : MonoBehaviour
 {
     [Header("--- Boss UI Elements ---")]
-    public GameObject bossHPBar;        // 타겟 머리 위 보스 체력바 (Slider)
-    public GameObject bossTimerBar;     // 화면 상단 보스 타이머 바 (Slider)
+    public GameObject bossHPBar;
+    public GameObject bossTimerBar;
 
     [Header("--- General Dummy UI Elements ---")]
-    public GameObject generalHPBar;     // 일반 더미 전용 체력바 (Slider)
-    public TextMeshProUGUI dummyHPText;  // 체력 수치 텍스트 (예: 100 / 100)
+    public GameObject generalHPBar;
+    public TextMeshProUGUI dummyHPText;
 
     [Header("--- Reference Scripts ---")]
-    public StageManager stageManager;    // 현재 스테이지 정보를 가져올 스크립트
+    public StageManager stageManager;
 
     [Header("--- Fade & Target UI ---")]
-    public Animator fadeAnimator;       // Fade_Panel의 애니메이터
-    public Image dummyImage;            // 화면 우측 허수아비의 Image 컴포넌트
-    public TextMeshProUGUI dummyNameText;// 허수아비 이름 텍스트
+    public Animator fadeAnimator;
+    public Image dummyImage;
+    public TextMeshProUGUI dummyNameText;
+
+    [Header("--- Background UI ---")]
+    public Image backgroundImage;
 
     [Header("--- Dummy Sprites ---")]
-    public Sprite generalDummySprite;   // 일반 허수아비 이미지
-    public Sprite bossDummySprite;      // 보스 몬스터 이미지
+    public Sprite generalDummySprite;
+    public Sprite bossDummySprite;
+
+    [Header("--- Background Sprites (아침/점심/저녁) ---")]
+    public Sprite bg_Morning;
+    public Sprite bg_Afternoon;
+    public Sprite bg_Evening;
+
+    [Header("--- Stage Selection UI Lock ---")]
+    // 인스펙터창에 연결된 1-1 ~ 1-9 입장 버튼 리스트
+    public List<Button> stageEnterButtons = new List<Button>();
 
     [Header("--- Boss Timer Settings ---")]
     private float bossLimitTime = 15f;
     private float bossCurrentTime = 15f;
 
-    // 인게임 데이터 내부 변수
-    private int currentChapter = 1;     // 앞 숫자 (1-1의 '1')
-    private int currentStage = 1;       // 뒤 숫자 (1-1의 '1')
+    private int currentStage = 1;
+    private int maxUnlockedStage = 1;
     private float maxHP = 100f;
     private float currentHP = 100f;
     private bool isBossActive = false;
     private bool isTransitioning = false;
+    private bool isGameCleared = false;
 
     private void Start()
     {
@@ -44,14 +57,18 @@ public class BattleUIManager : MonoBehaviour
         DisableSliderInteraction(bossTimerBar);
 
         InitGeneralStage();
+
+        // 게임 시작할 때 잠긴 버튼들 바로 숨기기
+        UpdateStageButtonsInteractable();
     }
 
     private void Update()
     {
+        if (isGameCleared) return;
+
         if (isBossActive && !isTransitioning)
         {
             bossCurrentTime -= Time.deltaTime;
-
             if (bossCurrentTime < 0) bossCurrentTime = 0;
 
             if (bossTimerBar != null)
@@ -80,7 +97,6 @@ public class BattleUIManager : MonoBehaviour
         }
     }
 
-    // 일반 스테이지 화면 세팅 함수
     private void InitGeneralStage()
     {
         isBossActive = false;
@@ -90,25 +106,43 @@ public class BattleUIManager : MonoBehaviour
         if (bossTimerBar != null) bossTimerBar.SetActive(false);
 
         if (dummyImage != null && generalDummySprite != null) dummyImage.sprite = generalDummySprite;
-        if (dummyNameText != null) dummyNameText.text = $"{currentChapter}-{currentStage} 일반 허수아비";
+        if (dummyNameText != null) dummyNameText.text = $"1-{currentStage} 일반 허수아비";
 
-        // ⭐ 변경: 이제 "1-1" 이라는 완성된 문자열을 전달하여 체력을 세팅합니다.
-        string stageKey = $"{currentChapter}-{currentStage}";
+        string stageKey = $"1-{currentStage}";
         SetDummyMaxHPByStageKey(stageKey);
+
+        UpdateBackground();
     }
 
-    // ⭐ [이름 기반 체력 세팅 함수] 
+    private void UpdateBackground()
+    {
+        if (backgroundImage == null) return;
+
+        if (currentStage >= 1 && currentStage <= 3)
+        {
+            if (bg_Morning != null) backgroundImage.sprite = bg_Morning;
+            backgroundImage.color = Color.white;
+        }
+        else if (currentStage >= 4 && currentStage <= 6)
+        {
+            if (bg_Afternoon != null) backgroundImage.sprite = bg_Afternoon;
+            backgroundImage.color = Color.white;
+        }
+        else if (currentStage >= 7 && currentStage <= 9)
+        {
+            if (bg_Evening != null) backgroundImage.sprite = bg_Evening;
+            backgroundImage.color = Color.white;
+        }
+    }
+
     private void SetDummyMaxHPByStageKey(string stageKey)
     {
-        // DummyData 창고에 "2-1" 같은 문자가 등록되어 있는지 검사
         if (DummyData.DummyHealths.ContainsKey(stageKey))
         {
-            // 기획자가 테이블에 정성스레 적어놓은 해당 스테이지 고유 체력 대입!
             maxHP = DummyData.DummyHealths[stageKey];
         }
         else
         {
-            // 만약 테이블에 없는 먼 미래의 스테이지라면 방어용 예외 처리 공식 적용
             maxHP = 9999f;
         }
 
@@ -116,54 +150,25 @@ public class BattleUIManager : MonoBehaviour
         UpdateHPUI();
     }
 
-    // [보스 도전] 버튼 클릭 시
-    public void EnterBossBattle()
+    public void ClickToMoveStage(int targetStage)
     {
-        if (stageManager == null || isTransitioning) return;
+        if (targetStage > maxUnlockedStage || isTransitioning || isBossActive) return;
 
-        int currentStageNum = stageManager.GetCurrentStageNumber();
-
-        // 뒤쪽 스테이지 숫자가 딱 '5'일 때 보스전 활성화
-        if (currentStageNum == 5)
+        currentStage = targetStage;
+        string targetStageName = $"1-{currentStage}";
+        if (stageManager != null)
         {
-            isBossActive = true;
-            bossCurrentTime = bossLimitTime;
-
-            if (generalHPBar != null) generalHPBar.SetActive(false);
-            if (bossHPBar != null) bossHPBar.SetActive(true);
-            if (bossTimerBar != null) bossTimerBar.SetActive(true);
-
-            if (dummyImage != null && bossDummySprite != null) dummyImage.sprite = bossDummySprite;
-            if (dummyNameText != null) dummyNameText.text = $"CHAPTER {currentChapter} BOSS 등장!";
-
-            // ⭐ 보스 체력도 마찬가지로 조합된 키(예: "1-5", "2-5")를 넘겨서 뺍니다.
-            string stageKey = $"{currentChapter}-{currentStage}";
-            SetDummyMaxHPByStageKey(stageKey);
+            stageManager.ChangeStage(targetStageName);
         }
+        InitGeneralStage();
     }
 
-    // 공격 버튼 터치 시
-    public void OnAttackDummy()
+    public void ApplyDamage(float damageAmount)
     {
-        if (isTransitioning)
-            return;
-    }
+        if (isTransitioning || isGameCleared) return;
 
-    //대미지 들어갈 때
-    public void ApplyDamage(float damage)
-    {
-
-        int creditReward = Mathf.FloorToInt(damage * 0.5f);
-
-        CreditManager.Instance.AddCredit(creditReward);
-
-        if (isTransitioning)
-            return;
-
-        currentHP -= damage;
-
-        if (currentHP < 0)
-            currentHP = 0;
+        currentHP -= damageAmount;
+        if (currentHP < 0) currentHP = 0;
 
         UpdateHPUI();
 
@@ -187,7 +192,6 @@ public class BattleUIManager : MonoBehaviour
         if (dummyHPText != null) dummyHPText.text = $"{currentHP} / {maxHP}";
     }
 
-    // [승리 시] 자동으로 다음 스테이지 이동 계산 루틴
     private IEnumerator TransitionRoutine()
     {
         isTransitioning = true;
@@ -200,22 +204,44 @@ public class BattleUIManager : MonoBehaviour
 
         yield return new WaitForSeconds(0.4f);
 
-        currentStage++;
-
-        // 5스테이지 보스를 깨고 넘어가면 챕터가 올라감
-        if (currentStage > 5)
+        if (currentStage == 9)
         {
-            currentChapter++;
-            currentStage = 1;
+            isGameCleared = true;
+            isBossActive = false;
+
+            if (bossHPBar != null) bossHPBar.SetActive(false);
+            if (bossTimerBar != null) bossTimerBar.SetActive(false);
+            if (generalHPBar != null) generalHPBar.SetActive(false);
+
+            if (dummyNameText != null) dummyNameText.text = "🎉 GAME ALL CLEAR! 🎉";
+            if (dummyHPText != null) dummyHPText.text = "1챕터 완결을 축하합니다!";
+            if (dummyImage != null) dummyImage.color = new Color(1, 1, 1, 0.3f);
+
+            yield return new WaitForSeconds(0.6f);
+            if (fadeAnimator != null)
+            {
+                fadeAnimator.gameObject.SetActive(false);
+            }
+
+            isTransitioning = false;
+            yield break;
         }
 
-        string nextStageName = $"{currentChapter}-{currentStage}";
+        currentStage++;
+
+        if (currentStage > maxUnlockedStage)
+        {
+            maxUnlockedStage = currentStage;
+            // ⭐ 다음 스테이지가 해금되었으니 숨겨진 버튼을 다시 켜주러 갑니다.
+            UpdateStageButtonsInteractable();
+        }
+
+        string nextStageName = $"1-{currentStage}";
         if (stageManager != null)
         {
             stageManager.ChangeStage(nextStageName);
         }
 
-        // 새 스테이지 세팅 호출 (이 내부에서 "2-1" 문자열을 만들어 새 피통을 가져옴)
         InitGeneralStage();
 
         yield return new WaitForSeconds(0.6f);
@@ -248,5 +274,28 @@ public class BattleUIManager : MonoBehaviour
             fadeAnimator.gameObject.SetActive(false);
         }
         isTransitioning = false;
+    }
+
+    // ⭐ [수정] 잠겨있는 버튼은 SetActive(false)로 눈앞에서 아예 지워버리는 로직
+    private void UpdateStageButtonsInteractable()
+    {
+        for (int i = 0; i < stageEnterButtons.Count; i++)
+        {
+            if (stageEnterButtons[i] == null) continue;
+
+            int buttonStageNum = i + 1;
+
+            if (buttonStageNum <= maxUnlockedStage)
+            {
+                // 이미 깬/진입한 스테이지: [입장] 버튼 보이게 하기
+                stageEnterButtons[i].gameObject.SetActive(true);
+                stageEnterButtons[i].interactable = true;
+            }
+            else
+            {
+                // 아직 못 깬 미지의 스테이지: [입장] 버튼을 통째로 숨겨버리기 🚫
+                stageEnterButtons[i].gameObject.SetActive(false);
+            }
+        }
     }
 }
