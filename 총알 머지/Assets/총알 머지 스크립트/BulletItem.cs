@@ -37,7 +37,9 @@ public class BulletItem : MonoBehaviour,
 
     public void OnDrag(PointerEventData eventData)
     {
-        transform.position += (Vector3)eventData.delta;
+        RectTransform rect = GetComponent<RectTransform>();
+
+        rect.anchoredPosition += eventData.delta;
     }
 
     public void OnEndDrag(PointerEventData eventData)
