@@ -163,12 +163,23 @@ public class BattleUIManager : MonoBehaviour
         InitGeneralStage();
     }
 
-    public void ApplyDamage(float damageAmount)
+    public void ApplyDamage(float damage)
     {
-        if (isTransitioning || isGameCleared) return;
+        Debug.Log("들어온 데미지 : " + damage);
 
-        currentHP -= damageAmount;
-        if (currentHP < 0) currentHP = 0;
+        int creditReward = Mathf.FloorToInt(damage * 0.5f);
+
+        Debug.Log("획득 크래딧 : " + creditReward);
+
+        CreditManager.Instance.AddCredit(creditReward);
+
+        if (isTransitioning)
+            return;
+
+        currentHP -= damage;
+
+        if (currentHP < 0)
+            currentHP = 0;
 
         UpdateHPUI();
 

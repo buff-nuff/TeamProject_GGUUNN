@@ -67,6 +67,8 @@ public class BulletItem : MonoBehaviour,
                 return;
             }
 
+            Debug.Log("장착중 여부 : " + slot.IsEquipped(this));
+
             if (slot.IsEquipped(this))
             {
                 slot.Unequip(this);

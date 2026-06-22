@@ -35,7 +35,11 @@ public class CreditManager : MonoBehaviour
 
     public void AddCredit(int amount)
     {
+        Debug.Log("추가될 크래딧 : " + amount);
+
         currentCredit += amount;
+
+        Debug.Log("현재 크래딧 : " + currentCredit);
 
         UpdateUI();
     }

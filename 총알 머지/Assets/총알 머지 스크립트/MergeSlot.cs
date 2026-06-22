@@ -10,17 +10,30 @@ public class MergeSlot : MonoBehaviour
 
     public bool IsInside(Vector3 worldPos)
     {
+        Debug.Log("IsInside 호출");
+
         RectTransform rect =
             GetComponent<RectTransform>();
+
+        if (rect == null)
+        {
+            Debug.LogError("RectTransform 없음");
+            return false;
+        }
 
         Vector2 screenPos =
             RectTransformUtility.WorldToScreenPoint(
                 null,
                 worldPos);
 
-        return RectTransformUtility.RectangleContainsScreenPoint(
-            rect,
-            screenPos);
+        bool inside =
+            RectTransformUtility.RectangleContainsScreenPoint(
+                rect,
+                screenPos);
+
+        Debug.Log("장착칸 체크 : " + inside);
+
+        return inside;
     }
 
     public bool IsEquipped(BulletItem bullet)
@@ -30,6 +43,8 @@ public class MergeSlot : MonoBehaviour
 
     public void Equip(BulletItem bullet)
     {
+
+        Debug.Log("장착 성공");
 
         CurrentDamage = bullet.damage;
 
@@ -51,7 +66,7 @@ public class MergeSlot : MonoBehaviour
 
         rect.anchoredPosition = Vector2.zero;
 
-        targetAnimator.SetBool("Equipped", true);
+        targetAnimator.SetBool("shot", true);
     }
 
     public void Unequip(BulletItem bullet)
@@ -85,6 +100,15 @@ public class MergeSlot : MonoBehaviour
 
         equippedBullet = null;
 
-        targetAnimator.SetBool("Equipped", false);
+        CurrentDamage = 0;
+
+        Debug.Log("shot false 실행");
+
+        targetAnimator.SetBool("shot", false);
+    }
+
+    public bool HasBullet()
+    {
+        return equippedBullet != null;
     }
 }
