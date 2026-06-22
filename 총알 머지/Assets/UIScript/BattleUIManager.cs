@@ -3,6 +3,7 @@ using UnityEngine.UI;
 using System.Collections;
 using System.Collections.Generic;
 using TMPro;
+using UnityEngine.SceneManagement;
 
 public class BattleUIManager : MonoBehaviour
 {
@@ -21,6 +22,9 @@ public class BattleUIManager : MonoBehaviour
     public Animator fadeAnimator;
     public Image dummyImage;
     public TextMeshProUGUI dummyNameText;
+
+    [Header("--- Clear UI ---")]
+    public GameObject clearPanel;
 
     [Header("--- Background UI ---")]
     public Image backgroundImage;
@@ -207,6 +211,8 @@ public class BattleUIManager : MonoBehaviour
     {
         isTransitioning = true;
 
+        ClearAllBullets();
+
         if (fadeAnimator != null)
         {
             fadeAnimator.gameObject.SetActive(true);
@@ -217,24 +223,16 @@ public class BattleUIManager : MonoBehaviour
 
         if (currentStage == 9)
         {
-            isGameCleared = true;
-            isBossActive = false;
-
-            if (bossHPBar != null) bossHPBar.SetActive(false);
-            if (bossTimerBar != null) bossTimerBar.SetActive(false);
-            if (generalHPBar != null) generalHPBar.SetActive(false);
-
-            if (dummyNameText != null) dummyNameText.text = "🎉 GAME ALL CLEAR! 🎉";
-            if (dummyHPText != null) dummyHPText.text = "1챕터 완결을 축하합니다!";
-            if (dummyImage != null) dummyImage.color = new Color(1, 1, 1, 0.3f);
-
-            yield return new WaitForSeconds(0.6f);
             if (fadeAnimator != null)
             {
                 fadeAnimator.gameObject.SetActive(false);
             }
 
-            isTransitioning = false;
+            clearPanel.SetActive(true);
+
+            yield return new WaitForSeconds(3f);
+
+            SceneManager.LoadScene("StartTitle");
             yield break;
         }
 
@@ -309,4 +307,38 @@ public class BattleUIManager : MonoBehaviour
             }
         }
     }
+
+    private void ClearAllBullets()
+    {
+        MergeSlot slot =
+            FindFirstObjectByType<MergeSlot>();
+
+        if (slot != null)
+        {
+            if (slot.GetEquippedBullet() != null)
+            {
+                slot.Unequip(slot.GetEquippedBullet());
+            }
+        }
+
+        BulletItem[] bullets =
+            FindObjectsByType<BulletItem>(
+                FindObjectsSortMode.None);
+
+        foreach (BulletItem bullet in bullets)
+        {
+            Destroy(bullet.gameObject);
+        }
+
+        GridCell[] cells =
+            FindObjectsByType<GridCell>(
+                FindObjectsSortMode.None);
+
+        foreach (GridCell cell in cells)
+        {
+            cell.currentItem = null;
+        }
+    }
+
+
 }

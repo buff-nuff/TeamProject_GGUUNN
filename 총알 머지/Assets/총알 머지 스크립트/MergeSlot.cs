@@ -111,4 +111,9 @@ public class MergeSlot : MonoBehaviour
     {
         return equippedBullet != null;
     }
+
+    public BulletItem GetEquippedBullet()
+    {
+        return equippedBullet;
+    }
 }

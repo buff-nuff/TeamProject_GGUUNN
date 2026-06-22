@@ -104,8 +104,35 @@ public class BulletItem : MonoBehaviour,
             return;
         }
 
+        if (other.level != level)
+        {
+            transform.position = startPosition;
+            return;
+        }
+
+        if (slot != null)
+        {
+            if (slot.IsEquipped(this))
+            {
+                transform.position = startPosition;
+                return;
+            }
+
+            if (other != null && slot.IsEquipped(other))
+            {
+                transform.position = startPosition;
+                return;
+            }
+        }
+
         if (other.level == level)
         {
+            if (level >= 4)
+            {
+                transform.position = targetCell.transform.position;
+                return;
+            }
+
             int nextLevel = level + 1;
 
             currentCell.currentItem = null;
@@ -115,10 +142,6 @@ public class BulletItem : MonoBehaviour,
             Destroy(gameObject);
 
             MergeManager.Instance.SpawnBullet(nextLevel, targetCell);
-        }
-        else
-        {
-            transform.position = startPosition;
         }
     }
 }
